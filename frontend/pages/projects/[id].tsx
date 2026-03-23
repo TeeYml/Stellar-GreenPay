@@ -8,7 +8,7 @@ import DonateForm from "@/components/DonateForm";
 import DonationFeed from "@/components/DonationFeed";
 import WalletConnect from "@/components/WalletConnect";
 import { fetchProject, fetchProjectUpdates } from "@/lib/api";
-import { formatXLM, formatCO2, progressPercent, timeAgo, statusClass, statusLabel, CATEGORY_ICONS } from "@/utils/format";
+import { formatXLM, formatCO2, progressPercent, timeAgo, statusClass, statusLabel, CATEGORY_ICONS, copyToClipboard } from "@/utils/format";
 import { accountUrl } from "@/lib/stellar";
 import type { ClimateProject, ProjectUpdate } from "@/utils/types";
 
@@ -22,6 +22,7 @@ export default function ProjectDetail({ publicKey, onConnect }: ProjectDetailPro
   const [updates,   setUpdates]   = useState<ProjectUpdate[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
 
   useEffect(() => {
     if (!id) return;
@@ -30,6 +31,18 @@ export default function ProjectDetail({ publicKey, onConnect }: ProjectDetailPro
       .catch(() => router.push("/projects"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleCopyWallet = async () => {
+    if (!project) return;
+    const success = await copyToClipboard(project.walletAddress);
+    if (success) {
+      setCopyState('copied');
+      setTimeout(() => setCopyState('idle'), 2000);
+    } else {
+      setCopyState('error');
+      setTimeout(() => setCopyState('idle'), 2000);
+    }
+  };
 
   if (loading || !project) return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 animate-pulse">
@@ -104,6 +117,31 @@ export default function ProjectDetail({ publicKey, onConnect }: ProjectDetailPro
                 className="address-tag hover:border-forest-300 transition-colors">
                 {project.walletAddress.slice(0,8)}...{project.walletAddress.slice(-6)} ↗
               </a>
+              <button
+                onClick={handleCopyWallet}
+                className="ml-1 p-1.5 rounded hover:bg-forest-100 transition-colors focus:outline-none focus:ring-2 focus:ring-forest-300"
+                title="Copy wallet address"
+                aria-label="Copy wallet address to clipboard"
+              >
+                {copyState === 'copied' ? (
+                  <span className="flex items-center gap-1 text-green-600 font-semibold">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Copied!
+                  </span>
+                ) : copyState === 'error' ? (
+                  <span className="flex items-center gap-1 text-red-600 text-xs">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </span>
+                ) : (
+                  <svg className="w-4 h-4 text-[#8aaa8a] hover:text-forest-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
 
