@@ -6,6 +6,10 @@ const express = require("express");
 const router  = express.Router();
 const { v4: uuid } = require("uuid");
 const { donations, projects, profiles } = require("../services/store");
+const { createRateLimiter } = require("../middleware/rateLimiter")
+
+
+const donationLimiter = createRateLimiter(10, 1); // 10 requests per minute
 
 function validateKey(k) {
   if (!k || !/^G[A-Z0-9]{55}$/.test(k)) { const e = new Error("Invalid Stellar public key"); e.status = 400; throw e; }
@@ -32,7 +36,7 @@ function computeBadges(totalXLM) {
 }
 
 // POST /api/donations — record a donation after on-chain tx
-router.post("/", (req, res, next) => {
+router.post("/", donationLimiter ,(req, res, next) => {
   try {
     const { projectId, donorAddress, amountXLM, message, transactionHash } = req.body;
     validateKey(donorAddress);

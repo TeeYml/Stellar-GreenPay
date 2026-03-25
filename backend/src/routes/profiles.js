@@ -5,12 +5,15 @@
 const express = require("express");
 const router  = express.Router();
 const { profiles } = require("../services/store");
+const { createRateLimiter } = require("../middleware/rateLimiter")
 
 function validateKey(k) {
   if (!k || !/^G[A-Z0-9]{55}$/.test(k)) { const e = new Error("Invalid public key"); e.status = 400; throw e; }
 }
 
-router.get("/:publicKey", (req, res, next) => {
+const profilePostLimiter = createRateLimiter(20, 1);
+
+router.get("/:publicKey",(req, res, next) => {
   try {
     validateKey(req.params.publicKey);
     const p = profiles.get(req.params.publicKey);
@@ -19,7 +22,7 @@ router.get("/:publicKey", (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post("/", (req, res, next) => {
+router.post("/", profilePostLimiter, (req, res, next) => {
   try {
     const { publicKey, displayName, bio } = req.body;
     validateKey(publicKey);
